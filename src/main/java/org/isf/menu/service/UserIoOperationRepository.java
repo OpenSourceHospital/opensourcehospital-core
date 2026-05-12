@@ -1,0 +1,92 @@
+/*
+ * Open Hospital (www.open-hospital.org)
+ * Copyright © 2006-2024 Informatici Senza Frontiere (info@informaticisenzafrontiere.org)
+ *
+ * Open Hospital is a free and open source software for healthcare data management.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * https://www.gnu.org/licenses/gpl-3.0-standalone.html
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ */
+package org.isf.menu.service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.isf.menu.model.User;
+import org.isf.menu.model.UserGroup;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface UserIoOperationRepository extends JpaRepository<User, String> {
+
+	List<User> findAllByOrderByUserNameAsc();
+
+	List<User> findAllByDeletedOrderByUserNameAsc(boolean deleted);
+
+	User findByUserName(String userName);
+
+	List<User> findAllByDeleted(boolean deleted);
+
+	User findByUserNameAndDeleted(String userName, boolean deleted);
+
+	@Query(value = "select user from User user where user.userGroupName.code=:groupId order by user.userName")
+	List<User> findAllByUserGroupIdOrderByUserNameAsc(@Param("groupId") String groupId);
+
+	@Query(value = "select user from User user where user.userGroupName.code=:groupId and deleted=:deleted order by user.userName")
+	List<User> findAllByUserGroupIdAndDeletedOrderByUserNameAsc(@Param("groupId") String groupId, @Param("deleted") boolean deleted);
+
+	@Modifying
+	@Query(value = "update User user set user.desc=:description, user.userGroupName=:groupName where user.userName=:id")
+	int updateUser(@Param("description") String description, @Param("groupName") UserGroup groupName, @Param("id") String id);
+
+	@Modifying
+	@Query(value = "update User user set user.desc=:description, user.userGroupName=:groupName, user.deleted=:deleted, user.deletedBy=:deletedBy, user.deletedDate=:deletedDate where user.userName=:id")
+	int updateUser(@Param("description") String description, @Param("groupName") UserGroup groupName, @Param("deleted") boolean deleted,
+		@Param("deletedBy") String deletedBy, @Param("deletedDate") LocalDateTime deletedDate, @Param("id") String id);
+
+	@Modifying
+	@Query(value = "update User set passwd=:password, passwdLastChanged=:passwdLastChanged, passwdMustChange=:passwdMustChange where userName=:id")
+	int updatePassword(@Param("password") String password, @Param("passwdLastChanged") LocalDateTime passwdLastChanged,
+		@Param("passwdMustChange") boolean passwdMustChange, @Param("id") String id);
+
+	@Modifying
+	@Query(value = "update User set failedAttempts=:attempts where userName=:id")
+	void updateFailedAttempts(@Param("attempts") int failAttempts, @Param("id") String id);
+
+	@Modifying
+	@Query(value = "update User set isAccountLocked=:isLocked, lockedTime=:lockTime where userName=:id")
+	void updateUserLocked(@Param("isLocked") boolean isLocked, @Param("lockTime") LocalDateTime lockTime, @Param("id") String id);
+
+	@Modifying
+	@Query(value = "update User set lastLogin=:lastLoggedIn where userName=:id")
+	void setLastLogin(@Param("lastLoggedIn") LocalDateTime lockTime, @Param("id") String id);
+
+	@Query("select count(u) from User u where active=1 and deleted=false")
+	long countAllActiveUsers();
+
+	@Query("select count(u) from User u where active=1 and deleted=:deleted")
+	long countAllActiveUsersByDeleted(@Param("deleted") boolean deleted);
+
+	@Query("select count(g) from UserGroup g where active=1 and deleted=false")
+	long countAllActiveGroups();
+
+	@Query("select count(g) from UserGroup g where active=1 and deleted=:deleted")
+	long countAllActiveGroupsByDeleted(@Param("deleted") boolean deleted);
+
+}
